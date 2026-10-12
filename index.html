@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="uk" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Startres AI - APK Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        halloween: {
+                            orange: '#FF6B00',
+                            purple: '#2D1B4E',
+                            dark: '#120A21',
+                            accent: '#FF9E00',
+                            glow: '#8A2BE2'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #FF6B00;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-halloween-dark text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- Gemini API ключ -->
+    <script>
+        const GEMINI_API_KEY = "AQ.Ab8RN6K88WtRpy7wHopfZ2J7XRW2nD1Br1xLlO4blvZ2lEOA0Q";
+    </script>
+
+    <!-- Шапка -->
+    <header class="relative z-10 bg-halloween-purple/85 backdrop-blur-md border-b border-halloween-orange/30 p-3 flex justify-between items-center shadow-md">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-halloween-orange/20 rounded-xl text-halloween-orange">
+                <i data-lucide="sparkles" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg text-halloween-orange leading-tight">Startres AI</h1>
+                <span class="text-xs text-purple-300">APK & Vision Edition</span>
+            </div>
+        </div>
+        <button onclick="switchTab('settings')" class="p-2 rounded-full bg-halloween-orange/20 text-halloween-orange hover:bg-halloween-orange/30">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <!-- Основная зона -->
+    <main id="chatBackground" class="relative z-10 flex-1 overflow-y-auto p-4 space-y-4 custom-scroll bg-cover bg-center transition-all duration-300">
+        <div id="tab-chat" class="tab-content space-y-4 pb-20">
+            <div class="bg-halloween-purple/70 backdrop-blur border border-halloween-orange/30 rounded-2xl p-4 text-center shadow-lg">
+                <div class="flex justify-center mb-2">
+                    <div class="p-3 bg-halloween-orange/20 rounded-full text-halloween-orange">
+                        <i data-lucide="image" class="w-8 h-8"></i>
+                    </div>
+                </div>
+                <h2 class="text-lg font-bold text-halloween-orange">Готово до роботи в APK та з фото!</h2>
+                <p class="text-xs text-slate-300 mt-1">Тепер можна прикріплювати картинки до повідомлень.</p>
+            </div>
+            <div id="messagesList" class="space-y-3"></div>
+        </div>
+
+        <div id="tab-settings" class="tab-content hidden space-y-4 max-w-md mx-auto pt-4">
+            <div class="bg-halloween-purple/90 border border-halloween-orange/40 rounded-2xl p-5 shadow-xl space-y-4">
+                <h2 class="text-xl font-bold text-halloween-orange flex items-center gap-2">
+                    <i data-lucide="sliders"></i> Налаштування фону
+                </h2>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">🖼️ Власний фон для чату:</label>
+                    <input type="file" id="bgUploader" accept="image/*" onchange="uploadCustomBackground(event)" class="hidden">
+                    <button onclick="document.getElementById('bgUploader').click()" class="w-full bg-slate-800 border border-halloween-orange/50 py-3 rounded-xl flex items-center justify-center gap-2 text-sm hover:bg-slate-700">
+                        <i data-lucide="upload"></i> Завантажити з галереї
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Превью фото -->
+    <div id="imagePreviewContainer" class="hidden relative z-20 px-3 pt-2 bg-halloween-dark/95 border-t border-halloween-orange/20 flex items-center gap-2">
+        <div class="relative inline-block">
+            <img id="imagePreview" src="" class="w-16 h-16 object-cover rounded-xl border border-halloween-orange">
+            <button onclick="removeImage()" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 text-xs shadow">
+                <i data-lucide="x" class="w-3 h-3"></i>
+            </button>
+        </div>
+        <span class="text-xs text-slate-300">Фото готове до відправки</span>
+    </div>
+
+    <!-- Нижняя панель ввода -->
+    <div class="relative z-20 bg-halloween-dark/95 border-t border-halloween-orange/30 p-2 space-y-2">
+        <div class="flex items-center gap-2">
+            <input type="file" id="imageUploader" accept="image/*" onchange="handleImageSelect(event)" class="hidden">
+            <button onclick="document.getElementById('imageUploader').click()" class="p-3 bg-slate-800 text-halloween-orange border border-halloween-orange/40 rounded-xl hover:bg-slate-700">
+                <i data-lucide="image" class="w-5 h-5"></i>
+            </button>
+
+            <input type="text" id="userInput" placeholder="Напишіть повідомлення..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:border-halloween-orange outline-none text-slate-100" onkeydown="if(event.key === 'Enter') sendMessage()">
+            
+            <button onclick="sendMessage()" class="p-3 bg-halloween-orange text-slate-950 font-bold rounded-xl hover:bg-halloween-accent active:scale-95 transition-transform">
+                <i data-lucide="send" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let contentsHistory = [];
+        let selectedImageBase64 = null;
+        let selectedImageMimeType = null;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+        }
+
+        function uploadCustomBackground(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    document.getElementById('chatBackground').style.backgroundImage = `url('${evt.target.result}')`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                selectedImageMimeType = file.type;
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    selectedImageBase64 = evt.target.result.split(',')[1];
+                    document.getElementById('imagePreview').src = evt.target.result;
+                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeImage() {
+            selectedImageBase64 = null;
+            selectedImageMimeType = null;
+            document.getElementById('imageUploader').value = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text && !selectedImageBase64) return;
+
+            const list = document.getElementById('messagesList');
+            
+            let userHtml = `<div class="flex justify-end"><div class="bg-halloween-orange text-slate-950 font-medium p-3 rounded-2xl rounded-tr-none max-w-[85%] text-sm shadow-md space-y-2">`;
+            if (selectedImageBase64) {
+                userHtml += `<img src="data:${selectedImageMimeType};base64,${selectedImageBase64}" class="rounded-lg max-h-40 object-cover">`;
+            }
+            if (text) {
+                userHtml += `<div>${text}</div>`;
+            }
+            userHtml += `</div></div>`;
+            list.innerHTML += userHtml;
+
+            input.value = '';
+            const currentImg = selectedImageBase64;
+            const currentMime = selectedImageMimeType;
+            removeImage();
+
+            const chatContainer = document.getElementById('chatBackground');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            const loadingId = 'loading_' + Date.now();
+            list.innerHTML += `
+                <div id="${loadingId}" class="flex justify-start">
+                    <div class="bg-halloween-purple/90 border border-halloween-orange/30 p-3 rounded-2xl rounded-tl-none text-sm text-slate-300 shadow-md animate-pulse">
+                        Startres AI думає...
+                    </div>
+                </div>
+            `;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            let parts = [];
+            if (text) parts.push({ text: text });
+            if (currentImg) {
+                parts.push({
+                    inlineData: {
+                        mimeType: currentMime,
+                        data: currentImg
+                    }
+                });
+            }
+
+            contentsHistory.push({
+                role: "user",
+                parts: parts
+            });
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        systemInstruction: {
+                            parts: [{ text: "Ти — Startres AI, дружній помічник розробника Компила. Відповідай українською мовою лаконічно та корисно." }]
+                        },
+                        contents: contentsHistory
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
+
+                let botReply = "Помилка відповіді.";
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+                    botReply = data.candidates[0].content.parts[0].text;
+                    contentsHistory.push({
+                        role: "model",
+                        parts: [{ text: botReply }]
+                    });
+                } else if (data.error) {
+                    botReply = `Помилка API: ${data.error.message || 'Невірний ключ'}`;
+                }
+
+                list.innerHTML += `
+                    <div class="flex justify-start">
+                        <div class="bg-halloween-purple/90 border border-halloween-orange/30 p-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm text-slate-100 shadow-md">
+                            <b>Startres AI:</b><br>${botReply.replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                list.innerHTML += `
+                    <div class="flex justify-start">
+                        <div class="bg-halloween-purple/90 border border-halloween-orange/30 p-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm text-slate-100 shadow-md">
+                            <b>Startres AI:</b> Помилка мережі. Спробуй ще раз!
+                        </div>
+                    </div>
+                `;
+            }
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
+os = data.videos; messages = data.messages; updateUI(); });
+        socket.on('update_videos', (v) => { videos = v; renderHome(); if(activeVideo) updateWatchMeta(); });
+        socket.on('update_users', (u) => { users = u; updateUI(); });
+        socket.on('update_messages', ({key, messages: msgs}) => { messages[key] = msgs; renderMsgs(); });
+        socket.on('auth_success', ({username}) => { currentUser = username; localStorage.setItem('sh_curr', username); updateUI(); showHome(); });
+        socket.on('auth_error', (err) => alert(err));
+
+        function showPage(id) {
+            ['home', 'watch', 'upload', 'auth', 'profile', 'messenger'].forEach(p => document.getElementById('page-'+p).classList.add('hidden'));
+            document.getElementById('page-'+id).classList.remove('hidden');
+        }
+        function showHome() { showPage('home'); renderHome(); }
+        function switchTab(t) { activeTab = t; document.getElementById('tab-all').classList.toggle('active', t==='all'); document.getElementById('tab-trending').classList.toggle('active', t==='trending'); renderHome(); }
+
+        function updateUI() {
+            const authBtn = document.getElementById('auth-nav-btn'), logoutBtn = document.getElementById('logout-nav-btn');
+            const profBtn = document.getElementById('profile-nav-btn'), upBtn = document.getElementById('upload-nav-btn'), msgBtn = document.getElementById('msg-nav-btn');
+            if (currentUser && users[currentUser]) {
+                authBtn.classList.add('hidden'); logoutBtn.classList.remove('hidden'); profBtn.classList.remove('hidden'); upBtn.classList.remove('hidden'); msgBtn.classList.remove('hidden');
+                document.getElementById('nav-username-text').textContent = currentUser;
+                document.getElementById('nav-user-avatar').src = users[currentUser].avatar || 'https://via.placeholder.com/40';
+            } else {
+                authBtn.classList.remove('hidden'); logoutBtn.classList.add('hidden'); profBtn.classList.add('hidden'); upBtn.classList.add('hidden'); msgBtn.classList.add('hidden');
+            }
+        }
+        function logout() { currentUser = null; localStorage.removeItem('sh_curr'); updateUI(); showHome(); }
+
+        function submitAuth() {
+            const user = document.getElementById('auth-user').value.trim();
+            const pass = document.getElementById('auth-pass').value.trim();
+            if(!user || !pass) return alert('Заповніть поля!');
+            socket.emit('auth_user', {username: user, pass});
+        }
+
+        function renderHome() {
+            const grid = document.getElementById('home-video-grid'); grid.innerHTML = '';
+            let list = [...videos];
+            if(searchQ) list = list.filter(v => v.title.toLowerCase().includes(searchQ));
+            if(activeTab === 'trending') list.sort((a,b) => (b.fires||0) - (a.fires||0));
+
+            list.forEach(v => {
+                const card = document.createElement('div'); card.className = 'grid-card';
+                card.onclick = () => openWatch(v.id);
+                const av = (users[v.author] && users[v.author].avatar) || 'https://via.placeholder.com/30';
+                card.innerHTML = `
+                    <div class="thumbnail-wrapper"><img src="${v.thumb || ''}"></div>
+                    <div class="card-details">
+                        <div class="card-title">${v.title}</div>
+                        <div class="card-author">
+                            <span style="display:flex;align-items:center;gap:6px;"><img src="${av}" class="nav-avatar" style="width:20px;height:20px;">${v.author}</span>
+                            <span class="fire-badge">🔥 ${v.fires || 0}</span>
+                        </div>
+                    </div>`;
+                grid.appendChild(card);
+            });
+        }
+        function handleSearch() { searchQ = document.getElementById('search-input').value.trim().toLowerCase(); renderHome(); }
+
+        function openWatch(id) {
+            activeVideo = videos.find(v => v.id === id);
+            if(!activeVideo) return;
+            const player = document.getElementById('main-player');
+            player.src = activeVideo.url;
+            document.getElementById('watch-title').textContent = activeVideo.title;
+            document.getElementById('watch-desc').textContent = activeVideo.desc;
+            updateWatchMeta();
+            showPage('watch');
+            player.play().catch(()=>{});
+        }
+        function updateWatchMeta() {
+            document.getElementById('watch-author').textContent = activeVideo.author;
+            document.getElementById('watch-author-avatar').src = (users[activeVideo.author] && users[activeVideo.author].avatar) || 'https://via.placeholder.com/40';
+            document.getElementById('like-count').textContent = activeVideo.likes || 0;
+            document.getElementById('fire-count').textContent = activeVideo.fires || 0;
+        }
+        function react(type) { socket.emit('react_video', {id: activeVideo.id, type}); }
+
+        function uploadVideo() {
+            if(!currentUser) return showPage('auth');
+            const title = document.getElementById('up-title').value.trim();
+            const vFile = document.getElementById('up-video').files[0];
+            const tFile = document.getElementById('up-thumb').files[0];
+            const desc = document.getElementById('up-desc').value.trim();
+            if(!title || !vFile) return alert('Введіть назву та відео!');
+
+            const readerV = new FileReader();
+            readerV.onload = function(e1) {
+                const vUrl = e1.target.result;
+                if(tFile) {
+                    const readerT = new FileReader();
+                    readerT.onload = function(e2) {
+                        socket.emit('add_video', {id: Date.now(), title, url: vUrl, thumb: e2.target.result, desc, author: currentUser, likes:0, fires:0});
+                        showHome();
+                    };
+                    readerT.readAsDataURL(tFile);
+                } else {
+                    socket.emit('add_video', {id: Date.now(), title, url: vUrl, thumb: '', desc, author: currentUser, likes:0, fires:0});
+                    showHome();
+                }
+            };
+            readerV.readAsDataURL(vFile);
+        }
+
+        function openProfile(username) {
+            viewedUser = username; const u = users[username];
+            document.getElementById('prof-name').textContent = username;
+            document.getElementById('prof-avatar').src = u.avatar || 'https://via.placeholder.com/90';
+            document.getElementById('prof-banner').src = u.banner || 'https://via.placeholder.com/700x160';
+            const editBox = document.getElementById('profile-edit-box');
+            const slot = document.getElementById('profile-action-slot'); slot.innerHTML = '';
+            if(username === currentUser) {
+                editBox.classList.remove('hidden'); document.getElementById('edit-name').value = currentUser;
+            } else {
+                editBox.classList.add('hidden');
+                if(currentUser) {
+                    const btn = document.createElement('button'); btn.className = 'submit-btn'; btn.style.width='auto'; btn.textContent='💬 Написати в ЛС';
+                    btn.onclick = () => { activeChat = username; showMessenger(); selectChat(username); };
+                    slot.appendChild(btn);
+                }
+            }
+            showPage('profile');
+        }
+
+        function saveProfile() {
+            const newName = document.getElementById('edit-name').value.trim();
+            const aFile = document.getElementById('edit-avatar').files[0];
+            const bFile = document.getElementById('edit-banner').files[0];
+            if(!newName) return;
+
+            let aData = null, bData = null;
+            const sendUpdate = () => {
+                socket.emit('update_profile', {oldName: currentUser, newName, avatar: aData, banner: bData});
+                currentUser = newName; localStorage.setItem('sh_curr', newName);
+                openProfile(newName);
+            };
+
+            if(aFile) {
+                const r = new FileReader();
+                r.onload = (e) => { aData = e.target.result; if(bFile) { const r2 = new FileReader(); r2.onload = (e2) => { bData = e2.target.result; sendUpdate(); }; r2.readAsDataURL(bFile); } else sendUpdate(); };
+                r.readAsDataURL(aFile);
+            } else if(bFile) {
+                const r2 = new FileReader();
+                r2.onload = (e2) => { bData = e2.target.result; sendUpdate(); };
+                r2.readAsDataURL(bFile);
+            } else {
+                sendUpdate();
+            }
+        }
+
+        function showMessenger() {
+            if(!currentUser) return showPage('auth');
+            renderChatList(); showPage('messenger');
+        }
+        function renderChatList() {
+            const list = document.getElementById('chat-users'); list.innerHTML = '';
+            Object.keys(users).filter(u => u !== currentUser).forEach(u => {
+                const item = document.createElement('div'); item.className = `chat-user-item ${activeChat===u?'active':''}`;
+                item.onclick = () => selectChat(u);
+                item.innerHTML = `<img src="${users[u].avatar||'https://via.placeholder.com/35'}" class="nav-avatar" style="width:35px;height:35px;"><strong>${u}</strong>`;
+                list.appendChild(item);
+            });
+        }
+        function selectChat(u) {
+            activeChat = u; document.getElementById('chat-header').textContent = `Чат з: ${u}`;
+            document.getElementById('chat-input-box').classList.remove('hidden'); renderMsgs(); renderChatList();
+        }
+        function sendMsg() {
+            const txt = document.getElementById('chat-text').value.trim();
+            if(!txt || !activeChat) return;
+            socket.emit('send_message', {sender: currentUser, receiver: activeChat, text: txt});
+            document.getElementById('chat-text').value = '';
+        }
+        function renderMsgs() {
+            const box = document.getElementById('chat-msgs'); box.innerHTML = '';
+            if(!activeChat) return;
+            const key = [currentUser, activeChat].sort().join('_');
+            (messages[key] || []).forEach(m => {
+                const isOut = m.sender === currentUser;
+                const div = document.createElement('div'); div.className = `msg-bubble ${isOut?'msg-out':'msg-in'}`;
+                div.innerHTML = `<div>${m.text}</div><div style="font-size:10px; color:${isOut?'#ffcccc':'#aaa'}; text-align:right;">${m.time}</div>`;
+                box.appendChild(div);
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
+
